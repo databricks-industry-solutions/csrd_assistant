@@ -1,22 +1,24 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC ## Prepare environment
-
-# COMMAND ----------
-
-# MAGIC %run ./00_environment
+# MAGIC ## CSRD directive
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Parse CSRD directive
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02013L0034-20240109&qid=1712714544806
+# MAGIC On July 31, 2023, the European Commission adopted the [European Sustainability Reporting Standards](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202302772) (ESRS), which were published in the Official Journal of the European Union in December 2023. Drafted by the European Financial Reporting Advisory Group (EFRAG), the standards provide supplementary guidance for companies within the scope of the [E.U. Corporate Sustainability Reporting Directive](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022L2464) (CSRD). The adoption of the CSRD, along with the supporting ESRS, is intended to increase the breadth of nonfinancial information reported by companies and to ensure that the information reported is consistent, relevant, comparable, reliable, and easy to access.
 # MAGIC
-# MAGIC Directive 2013/34/EU of the European Parliament and of the Council of 26 June 2013 on the annual financial statements, consolidated financial statements and related reports of certain types of undertakings, amending Directive 2006/43/EC of the European Parliament and of the Council and repealing Council Directives 78/660/EEC and 83/349/EEC (Text with EEA relevance)Text with EEA relevance
+# MAGIC Source: [Deloitte](https://dart.deloitte.com/USDART/home/publications/deloitte/heads-up/2023/csrd-corporate-sustainability-reporting-directive-faqs)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Though the CSRD compliance poses a data quality challenge to firms trying to collect and report this information for the first time, the directive itself (as per many regulatory documents) may be source of confusion / concerns and subject to interpretation. In this exercise, we want to demonstrate generative AI to navigate through the complexities of regulatory documents and the CSRD initiative specifically. We aim at programmatically extracting chapters / articles / paragraphs from the CSRD initiative (available below) and provide users with solid foundations to build GenAI solutions in the context of regulatory compliance.
+# MAGIC
+# MAGIC https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02013L0034-20240109&qid=1712714544806
+
+# COMMAND ----------
+
+# MAGIC %run ./scripts/00_environment
 
 # COMMAND ----------
 
@@ -27,11 +29,16 @@ html_page = requests.get(act_url).text
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We may apply different data strategies to extract chapters and articles from the CSRD directive. The simplest approach would be to extract raw content and extract chunks that could feed our vector database. Whilst this would be the easiest route, we would naively split text in the middle of potentially critical articles, not ensuring strict understanding of each sections. As a consequence, and even if we apply a context window across multiple chunks a model may be tempted to "infer" missing words and generate content not 100% in line with regulatory text.  
+# MAGIC We may apply different data strategies to extract chapters and articles from the CSRD directive. The simplest approach would be to extract raw content and extract chunks that could feed our vector database. Whilst this would certainly be the easiest route, we would naively split text in the middle of potentially critical articles, not ensuring strict understanding of each sections. As a consequence, and even if we apply a context window across multiple chunks a model may be tempted to "infer" missing words and generate content not 100% in line with regulatory text.  
 # MAGIC
 # MAGIC A second approach may be to read text as a whole and let generative AI capabilities extract specific sections and articles for us. Whilst this offer an ease of use and certainly in line with future direction of generative AI, we could possibly leave text at the interpretation of AI rather than relying on pure fact. 
 # MAGIC
-# MAGIC Instead, we went down the "boring" and "outdated" approach of scraping our document manually (through our abstracted function and classes in `lib.csrd`). Efforts done upfront will certainly pay off later when extracting pure facts and well defined chapter, articles and paragraphs.
+# MAGIC Instead, we went down the "boring" and "outdated" approach of scraping our document manually. Efforts done upfront will certainly pay off later when extracting facts around well defined chapter, articles, paragraphs and citations, acting as a compliance assistant through Q&A capabilities or operation workflow.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC We make use of the Beautiful soup library to navigate HTML content. 
 
 # COMMAND ----------
 
@@ -160,7 +167,7 @@ for chapter_section in get_chapter_sections(content_section):
     CSRD.add_edge(chapter_id, f'{chapter_id}.{article_id}' )
 
     for paragraph_id, paragraph_text in article_paragraphs.items():
-      CSRD.add_node(f'{chapter_id}.{article_id}.{paragraph_id}', title=paragraph_text,label=f'Article {article_id}({paragraph_id})',group='PARAGRAPH' )
+      CSRD.add_node(f'{chapter_id}.{article_id}.{paragraph_id}', title=paragraph_text, label=f'Article {article_id}({paragraph_id})',group='PARAGRAPH' )
       CSRD.add_edge(f'{chapter_id}.{article_id}', f'{chapter_id}.{article_id}.{paragraph_id}')
 
 # COMMAND ----------
@@ -431,17 +438,19 @@ class CustomRetriever(BaseRetriever):
     processed_ids = set()
     supporting_documents = []
     for node_id, node_data in nodes:
+      node_content = '{}:\n{}'.format(node_data['label'], node_data['title'])
       if node_data['group'] == 'PARAGRAPH' and node_id not in processed_ids:
         processed_ids.add(node_id)
-        supporting_documents.append(Document(page_content=node_data['title'], metadata={'id': node_id}))
+        supporting_documents.append(Document(page_content=node_content, metadata={'id': node_id}))
 
       # Traverse graph to get cross reference articles
       children_id = list(self.knowledge_graph.successors(node_id))
       for child_id in children_id:
         child_data = self.knowledge_graph.nodes[child_id]
+        node_content = '{}:\n{}'.format(child_data['label'], child_data['title'])
         if child_data['group'] == 'PARAGRAPH' and child_id not in processed_ids:
           processed_ids.add(child_id)
-          supporting_documents.append(Document(page_content=child_data['title'], metadata={'id': child_id}))
+          supporting_documents.append(Document(page_content=node_content, metadata={'id': child_id}))
 
     return supporting_documents
 
