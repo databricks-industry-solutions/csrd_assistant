@@ -29,6 +29,9 @@ html_page = requests.get(act_url).text
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC
+# MAGIC ### Parsing strategy
+# MAGIC
 # MAGIC We may apply different data strategies to extract chapters and articles from the CSRD directive. The simplest approach would be to extract raw content and extract chunks that could feed our vector database. Whilst this would certainly be the easiest route, we would naively split text in the middle of potentially critical articles, not ensuring strict understanding of each sections. As a consequence, and even if we apply a context window across multiple chunks a model may be tempted to "infer" missing words and generate content not 100% in line with regulatory text.  
 # MAGIC
 # MAGIC A second approach may be to read text as a whole and let generative AI capabilities extract specific sections and articles for us. Whilst this offer an ease of use and certainly in line with future direction of generative AI, we could possibly leave text at the interpretation of AI rather than relying on pure fact. 
@@ -38,7 +41,9 @@ html_page = requests.get(act_url).text
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We make use of the Beautiful soup library to navigate HTML content. 
+# MAGIC We make use of the Beautiful soup library to navigate HTML content. Relatively complex, this HTML structure can be manually inspected through a browser / developer tool as per screenshot below.
+# MAGIC
+# MAGIC ![csrd_beautifulsoup.png](https://raw.githubusercontent.com/databricks-industry-solutions/csrd_assistant/main/images/csrd_beautifulsoup.png)
 
 # COMMAND ----------
 
@@ -123,6 +128,11 @@ def get_paragraphs(article_section):
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Finally, we could extract the hierarchy of content, from chapter, to articles and paragraph.
+
+# COMMAND ----------
+
 from bs4 import BeautifulSoup
 
 main_content = BeautifulSoup(html_page, 'html.parser')
@@ -142,6 +152,7 @@ for chapter_section in get_chapter_sections(content_section):
 
 # MAGIC %md
 # MAGIC ## Knowledge Graph
+# MAGIC Our content follows a tree structure, where each chapter may have multiple articles and each article having multiple paragraphs. A graph structure becomes a logical representation of our data. 
 
 # COMMAND ----------
 
@@ -172,6 +183,11 @@ for chapter_section in get_chapter_sections(content_section):
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC One can extract our graph nodes and manually investigate its content, further validating our parsing logic earlier. 
+
+# COMMAND ----------
+
 import pandas as pd
 node_df = pd.DataFrame(CSRD.nodes.data(), columns=['id', 'data'])
 df = pd.json_normalize(node_df['data'])
@@ -180,8 +196,18 @@ display(df[['id', 'group', 'label', 'title']])
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Stored as a graph, the same can easily be visualized to get a better understanding of the problem at hand. Our directive contains ~ 350 nodes where each node is connected to maximum 1 parent (tree structure), as represented below
+
+# COMMAND ----------
+
 from scripts.graph import displayGraph
 displayHTML(displayGraph(CSRD))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC With our graph stored in memory, one can easily access a given content through its natural identifier, in the form of `chapter-article-paragraph` coordinate.
 
 # COMMAND ----------
 
@@ -194,6 +220,7 @@ displayHTML(article_html(f'CSRD §{p_id}', p['title']))
 
 # MAGIC %md
 # MAGIC ## Indexing content
+# MAGIC Though representing our CSRD as a graph was visually compelling, it offers little to no search capability. At the age of generative AI, one may have to search content for a given question / query, hence perfect fit for vector store capability.
 
 # COMMAND ----------
 
@@ -215,6 +242,11 @@ for node_id, node_data in CSRD.nodes.data():
 
 csrd_df = pd.DataFrame(csrd_data)
 display(csrd_df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC In production settings, we highly encourage users to leverage Databricks vector store capability, linking a record down to the actual binary file (PDF) available on your volume, hence part of your same governance strategy. In the context of a solution accelerator, we decided to limit the infra requirement and provide similar capabilities in memory, hence leveraging in memory vector store such as FAISS. We leverage databricks Pay as token capability for embedding, representing each paragraph as vector document.
 
 # COMMAND ----------
 
@@ -242,6 +274,11 @@ db = FAISS.from_documents(documents=documents, embedding=embeddings)
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC We can now retrieve content based on semantic search. Given a question, part of text, or simple keywords, we can retrieve specific facts that we link back to actual paragraphs in our CSRD directive. This will become our foundation to our RAG strategy later. The example below returns the best matching paragraph with a relevance score.
+
+# COMMAND ----------
+
 question = 'disclosing transactions between related parties, transactions between related parties included in a consolidation that are eliminated on consolidation shall not be included'
 
 search, score = db.similarity_search_with_relevance_scores(question)[0]
@@ -251,6 +288,7 @@ displayHTML(vector_html('CSRD §{}'.format(search.metadata['id']), search.page_c
 
 # MAGIC %md
 # MAGIC ## Foundational model
+# MAGIC It is expected that foundational models like DBRX that learned knowledge from trillion of tokens may already know some of the relevant context for generic questions. 
 
 # COMMAND ----------
 
@@ -260,7 +298,7 @@ chat_model = ChatDatabricks(endpoint="databricks-dbrx-instruct", max_tokens = 30
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC It is expected that foundational models like DBRX that learned knowledge from trillion of tokens may already know some of the relevant context for generic questions. However, it would be cavalier to ask specific questions to our model and solely rely on its foundational knowledge. In the context of regulatory compliance, we cannot afford for a model to "make things up" or return information as "best guess", regardless of how convincing its answer might be. The following question might yield well formed answer that may seem convincing to the naked eye, but definitely lacks substance and quality required.
+# MAGIC However, it would be cavalier to ask specific questions to our model and solely rely on its foundational knowledge. In the context of regulatory compliance, we cannot afford for a model to "make things up" or return information as "best guess", regardless of how convincing its answer might be. The following question might yield well formed answer that may seem convincing to the naked eye, but definitely lacks substance and quality required, certainly failing to cite actual facts based on articles / paragraphs.
 
 # COMMAND ----------
 
@@ -312,6 +350,11 @@ chain = RetrievalQA.from_chain_type(
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Please note that prompts might be designed in a way that provides user with better clarity and / or confidence as well as safeguarding model against malicious or offensive use. This, however, is not part of this solution for simplicity sake. We invite users to explore our [DB Demo](https://www.databricks.com/resources/demos/tutorials/data-science-and-ai/lakehouse-ai-deploy-your-llm-chatbot) that covers the basics + advanced use of RAG. A good example would be to restrict our model to only answer questions that are CSRD related.
+
+# COMMAND ----------
+
 question = {"query": 'Which disclosures will be subject to assurance, and what level of assurance is required?'}
 answer = chain.invoke(question)
 displayHTML(rag_html(question['query'], answer['result'], answer['source_documents']))
@@ -319,7 +362,13 @@ displayHTML(rag_html(question['query'], answer['result'], answer['source_documen
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC In this example, we could let our model formulate a point of view based on actual facts we can trust. For the purpose of that demo, we simply represent output as a form of a notebook. In real life scenario, offering that capability would require building chat bot UI outside of a notebook based environment (not in the scope here).
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Extracting references
+# MAGIC It is expected that regulatory documents (or legal documents) might contain multiple definitions and cross references to other articles, paragraphs or other regulations. Whilst we kept the scope of this demo to the CSRD initiative only, our document might contain many cross references that would be needed to formulate an objective view with objective facts.
 
 # COMMAND ----------
 
