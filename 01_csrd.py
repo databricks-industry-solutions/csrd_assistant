@@ -521,4 +521,123 @@ displayHTML(rag_kg_html(question['query'], answer['result'], answer['source_docu
 
 # COMMAND ----------
 
-# MAGIC %md
+from typing import Union, List
+
+import os
+import datetime
+import requests
+import pandas as pd
+import json
+
+import openai
+
+from langchain_community.chat_models import ChatOpenAI
+from langchain.chains.openai_functions.openapi import openapi_spec_to_openai_fn
+from langchain.utilities.openapi import OpenAPISpec
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.schema.agent import AgentFinish
+from langchain.schema.runnable import RunnablePassthrough
+from langchain.agents import tool
+from langchain.agents.format_scratchpad import format_to_openai_functions
+from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
+from langchain_community.tools import BaseTool
+from langchain_community.tools.render import format_tool_to_openai_function
+
+from pydantic import BaseModel, Field
+
+# COMMAND ----------
+
+# Define the input schema
+class FindNeighboringItemByReference(BaseModel):
+  current_id: str = Field(..., description="The id of the current item.")
+  reference_label: str = Field(..., description="The text of the reference to the neighboring item.")
+
+@tool(args_schema=FindNeighboringItemByReference)
+def find_neighboring_item_by_reference(current_id: str, reference_label: str) -> str:
+  """Use this tool when you need to look up a specific reference from a 
+  neighboring item (chapter, article, or paragraph) from the current item."""
+
+  hits = [(n, CSRD_references.nodes[n]) for n in CSRD_references.neighbors(node_id)]
+  response = "\n\n".join(f"id: {n}\n{neighbor['title']}" for (n, neighbor) in hits)
+  return response
+
+
+# Define the input schema
+class FindItemByQuerySimilarity(BaseModel):
+  query: str = Field(..., description="The question or query for which you need additional information.")
+
+@tool(args_schema=FindItemByQuerySimilarity)
+def find_item_by_query_similarity(query: str) -> str:
+  """Use this tool to documents relevant to a given question."""
+
+  hits = db.similarity_search_with_relevance_scores(question)
+  response = "\n\n".join(f"id: {doc.metadata['id']}\n{doc.page_content}" for (doc, score) in hits)
+  return response
+
+# COMMAND ----------
+
+from langchain_community.chat_models import ChatOpenAI
+os.environ["OPENAI_API_KEY"] = dbutils.secrets.get("your-scope", "openai-api-key")
+
+# COMMAND ----------
+
+functions = [
+  format_tool_to_openai_function(f) for f in [
+    find_neighboring_item_by_reference,
+    find_item_by_query_similarity
+  ]
+]
+
+model = ChatOpenAI(temperature=0).bind(functions=functions)
+
+# COMMAND ----------
+
+instructions = """Given the context information and not prior knowledge.
+Answer compliance issue related to the CSRD directive only.
+
+If the question is not related to regulatory compliance, kindly decline to answer. 
+If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+Keep the answer as concise as possible, citing articles and chapters whenever applicable.
+Please do not repeat the answer and do not add any additional information. 
+
+You can respond to complex compliance related queries by looking up chapters, articles, and paragraphs
+from that document, or by looking up paragraphs related to another document. If you are given
+an item that is out of scope you inform the user that is beyond your scope. If a reference
+pertains to a separate document, you return the reference to that other document and ask
+the user to consult that document. You always try to be as comprehensive as possible in your
+responses, helpfully looking up as much information as may be useful given the question. However,
+you always summarize the final results in a useful way to the user, while maintaining key details.
+You must always base your responses on specific text from the document."""
+
+prompt = ChatPromptTemplate.from_messages([
+  ("system", instructions),
+  ("user", "{input}"),
+  MessagesPlaceholder(variable_name="agent_scratchpad")
+])
+
+chain = prompt | model | OpenAIFunctionsAgentOutputParser()
+
+agent_chain = RunnablePassthrough.assign(
+  agent_scratchpad = lambda x: format_to_openai_functions(x["intermediate_steps"])
+) | chain
+
+tools = [
+  find_item_by_query_similarity,
+  find_neighboring_item_by_reference]
+
+agent_executor = AgentExecutor(
+  agent=agent_chain,
+  tools=tools,
+  verbose=True)
+
+# COMMAND ----------
+
+agent_executor.invoke({"input": "What is meant by sustainability matters?"})
+
+# COMMAND ----------
+
+agent_executor.invoke({"input": "What is meant by sustainability matters, including sustainability factors?"})
+
+# COMMAND ----------
+
+agent_executor.invoke({"input": "What is referred to in Article 29(1) of document id 6.29.3?"})
