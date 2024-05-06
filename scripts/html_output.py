@@ -101,8 +101,9 @@ def rag_html(question, response, supporting_docs):
   response = re.sub('\n', '<br>', response)
   docs = ['<ul class="list-group">']
   for doc in supporting_docs:
+    doc_label = doc.metadata['label']
     content = re.sub('\n', '<br>', doc.page_content)
-    docs.append(f'<li class="list-group-item"><small>{content}</small></li>')
+    docs.append(f'<li class="list-group-item"><small>{doc_label}<br>{content}</small></li>')
   docs.append('</ul>')
   docs = '\n'.join(docs)
   return f'''<!doctype html>
@@ -133,8 +134,9 @@ def rag_kg_html(question, response, supporting_docs):
   response = re.sub('\n', '<br>', response)
   docs = ['<ul class="list-group">']
   for doc in supporting_docs:
+    doc_label = doc.metadata['label']
     content = re.sub('\n', '<br>', doc.page_content)
-    docs.append(f'<li class="list-group-item"><small>{content}</small></li>')
+    docs.append(f'<li class="list-group-item"><small>{doc_label}<br>{content}</small></li>')
   docs.append('</ul>')
   docs = '\n'.join(docs)
   return f'''<!doctype html>

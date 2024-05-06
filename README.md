@@ -6,15 +6,14 @@
 
 
 ## CSRD assistant
-*On July 31, 2023, the European Commission adopted the [European Sustainability Reporting Standards](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:L_202302772) (ESRS), which were published in the Official Journal of the European Union in December 2023. Drafted by the European Financial Reporting Advisory Group (EFRAG), the standards provide supplementary guidance for companies within the scope of the [E.U. Corporate Sustainability Reporting Directive](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32022L2464) (CSRD). The adoption of the CSRD, along with the supporting ESRS, is intended to increase the breadth of nonfinancial information reported by companies and to ensure that the information reported is consistent, relevant, comparable, reliable, and easy to access. Source: [Deloitte](https://dart.deloitte.com/USDART/home/publications/deloitte/heads-up/2023/csrd-corporate-sustainability-reporting-directive-faqs)*
-
-Though the CSRD compliance poses a data quality challenge to firms trying to collect and report this information for the first time, the directive itself (as per many regulatory documents) may be source of confusion / concerns and subject to interpretation. In this exercise, we want to demonstrate generative AI abilities to navigate through the complexities of regulatory documentation. 
+*The CSRD (Corporate Sustainability Reporting Directive) is a European Union initiative aimed at enhancing corporate accountability regarding sustainability matters. It mandates certain companies to disclose non-financial information (such as environmental, social, and governance factors) in their annual reports and other public disclosures. Although this initiative may pose a data quality challenge to many firms collecting (and reporting on) this information for the first time, the [directive](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02013L0034-20240109&qid=1712714544806) itself (as per many regulatory documents) may be source of confusion / concerns and subject to various interpretation. In this solution accelerator, we demonstrate how generative AI can be used to better navigate through the complexities of regulatory filings, bringing more transparency for companies to disclose their societal impact and allowing stakeholders to make more informed decisions.*
 
 ## Reference Architecture
 ![reference_architecture.png](https://raw.githubusercontent.com/databricks-industry-solutions/csrd_assistant/main/images/reference_architecture.png)
 
 ## Authors
-<antoine.amend@databricks.com>
+<antoine.amend@databricks.com><br>
+<corey.abshire@databricks.com>
 
 ## Project support 
 
@@ -33,4 +32,5 @@ Any issues discovered through the use of this project should be filed as GitHub 
 |pyvis|Graph visualization|BSD|https://pypi.org/project/pyvis/|
 |faiss-cpu|In memory vector store|MIT|https://pypi.org/project/faiss-cpu/|
 |langchain|LLM framework|MIT|https://pypi.org/project/langchain/|
+|langchain-openai|LLM framework for openAI|MIT|https://pypi.org/project/langchain-openai/|
 |SQLAlchemy|Database abstraction|MIT|https://pypi.org/project/SQLAlchemy/|
