@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC ## Parsing CSRD directive
-# MAGIC In this section, we aim at programmatically extracting chapters / articles / paragraphs from the [CSRD document](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02013L0034-20240109&qid=1712714544806) (available as HTML) and provide users with solid data foundations to build advanced generative AI applications in the context of regulatory compliance. 
+# MAGIC In this section, we programmatically extract chapters / articles / paragraphs from the CSRD [directive](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02013L0034-20240109&qid=1712714544806) (available as HTML) and provide users with solid data foundations for them to build generative AI applications in the context of regulatory compliance. 
 
 # COMMAND ----------
 
@@ -16,12 +16,12 @@ html_page = requests.get(act_url).text
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We may apply different data strategies to extract chapters and articles from the CSRD directive. The simplest approach would be to extract raw content and extract chunks that could feed a vector database. Whilst this approach would certainly be the easiest route (and often times the preferred option for less material use cases), it might contribute to the notion of hallucination since most large language model would be tempted to "infer" missing words and generate content not 100% in line with regulatory articles, chapters and paragraphs. A model making new regulations up is probably something one may need to avoid...
+# MAGIC There are different scraping strategies we could apply to extract content from the CSRD directive. The simplest approach would be to extract raw content and extract "chunks" as corpus documents. Whilst this approach would certainly be the easiest route (and often times the preferred option for generative AI use cases of lower materiality), splitting key paragraphs might contribute to the concept of model hallucination since the primary purpose of large language models is to "infer" missing words. This would generate content that may not 100% in line with a given regulatory articles that are left at the discretion of a model. Making up new regulations is probably something we may want to avoid...
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Instead, we went down the "boring" and "outdated" approach of scraping documents manually. We assume that the efforts done upfront will pay off at a later stage when extracting facts around specific chapters, articles, paragraphs and citations. For that purpose, we make use of the [Beautiful soup](https://beautiful-soup-4.readthedocs.io/en/latest/) library against our HTML content that we previously inspected through a browser / developer tool as per screenshot below. 
+# MAGIC Instead, we may roll up our sleeves and go down the "boring" and "outdated" approach of scraping documents. We assume that the efforts done upfront will certainly pay off at a later stage when extracting facts around specific chapters, articles, paragraphs and citations. For that purpose, we make use of the [Beautiful soup](https://beautiful-soup-4.readthedocs.io/en/latest/) library against our HTML content.
 
 # COMMAND ----------
 
@@ -31,7 +31,7 @@ html_page = requests.get(act_url).text
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Relatively complex, we could still observe delimiter tags / classes used in our scraping logic.
+# MAGIC Relatively complex HTML structure (regulators are not famous for their web development skills), we could still observe delimiter tags and classes that can be used to define our scraping logic.
 
 # COMMAND ----------
 
@@ -69,6 +69,11 @@ def get_article_id(article_section) -> str:
   article_id = article_section.find('p', {'class': 'title-article-norm'}).text.strip()
   article_id = re.sub('\"?Article\s*', '', article_id).strip()
   return article_id
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC We went as deep in the document as possible before applying a less elegant solution (using regular expression) due to the non standard structure of our HTML file. But our logic applied upfront guaranteed the isolation of specific chapter, articles and paragraphs content, hence improved reliability of source documents being returned.
 
 # COMMAND ----------
 
@@ -117,7 +122,7 @@ def get_paragraphs(article_section):
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Finally, we could extract the full content hierarchy from the CSRD directive, from chapter to articles and paragraph.
+# MAGIC Finally, we extract the content hierarchy buried beneath the CSRD directive, from chapter to articles and paragraph.
 
 # COMMAND ----------
 
@@ -140,7 +145,7 @@ for chapter_section in get_chapter_sections(content_section):
 
 # MAGIC %md
 # MAGIC ## Knowledge graph
-# MAGIC Our content follows a tree structure where each chapter has multiple articles and each article has multiple paragraphs. A graph structure becomes a logical representation of our data. Let's create 2 dataframes representing both our nodes (article content) and edges (relationships).
+# MAGIC Our content follows a tree structure where each chapter has multiple articles and each article has multiple paragraphs. A graph structure becomes a logical representation of our data. Prior to jumping into graph theory concepts, let's first create 2 dataframes representing both our nodes (article content) and edges (relationships).
 
 # COMMAND ----------
 
@@ -193,7 +198,7 @@ _ = spark.createDataFrame(edges_df).write.format('delta').mode('overwrite').save
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Physically stored as delta tables, the same can be rendered in memory and visualized through the [NetworkX](https://networkx.org/) libary.
+# MAGIC Physically stored as delta tables, the same can be rendered in memory and visualized through the [NetworkX](https://networkx.org/) and [pyvis](https://pypi.org/project/pyvis/) libaries.
 
 # COMMAND ----------
 
@@ -216,7 +221,7 @@ for i, e in edges_df.iterrows():
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Our directive contains ~ 350 nodes where each node is connected to maximum 1 parent (this is expected from a tree structure), as represented below. Feel free to Zoom in and out, hovering some nodes to read their actual text content.
+# MAGIC Our directive contains ~ 350 nodes where each node is connected to maximum 1 parent (this is expected from a tree structure), as represented below. Feel free to Zoom in and out, hovering some interesting nodes to access their actual text content.
 
 # COMMAND ----------
 
@@ -226,7 +231,7 @@ displayHTML(displayGraph(CSRD))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Please note that we carefully designed our graph unique identifiers so that one can access a given paragraph through a simple reference, expressed in the form of `[chapter-article-paragraph]` coordinate (e.g. `3.9.7`).
+# MAGIC Please note that we carefully designed our graph identifiers so that one can access a given paragraph through a simple reference, expressed in the form of `chapter.article.paragraph` coordinates (e.g. `3.9.7`). This will prove to be particularly handy at later stage of the process.
 
 # COMMAND ----------
 

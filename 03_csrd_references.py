@@ -62,7 +62,6 @@ def parse_references(txt, graph):
     paragraph_id = reference[1]
     if paragraph_id == '0':
       # Retrieve all paragraphs in a given article
-      # Do they exist in our graph?
       node_ids.extend(list(filter(lambda x: re.match(f'^\d+\.{article_id}\..*$', x), list(graph.nodes))))
     else:
       # Retrieve a given paragraph
@@ -73,7 +72,7 @@ def parse_references(txt, graph):
 
 # MAGIC %md
 # MAGIC ### Extracting references
-# MAGIC We delegate that task to our foundation model available out of the box on your databricks workspace.
+# MAGIC We delegate that task to our foundation model available out of the box on our databricks workspace.
 
 # COMMAND ----------
 
@@ -128,7 +127,7 @@ display(reference_df)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Unfortunately (but expected), regulatory documents are complex and show high number of references between different paragraphs and articles. Let's persist our changes as new edges in our table.
+# MAGIC Unfortunately (but expectedly), regulatory documents are complex and show high number of references between different paragraphs and articles. We append our changes as new edges in our table.
 
 # COMMAND ----------
 
@@ -155,10 +154,11 @@ for i, n in nodes_df.iterrows():
   CSRD_references.add_node(n['id'], label=n['label'], title=n['content'], group=n['group'])
 
 for i, e in edges_df.iterrows():
-  if e['label'] == 'REFERENCES':
-    CSRD_references.add_edge(e['src'], e['dst'], label=e['label'], color='coral')
-  else:
-    CSRD_references.add_edge(e['src'], e['dst'], label=e['label'])
+  if e['src'] != e['dst']:
+    if e['label'] == 'REFERENCES':
+      CSRD_references.add_edge(e['src'], e['dst'], color='coral')
+    else:
+      CSRD_references.add_edge(e['src'], e['dst'])
 
 # COMMAND ----------
 
@@ -168,4 +168,4 @@ displayHTML(displayGraph(CSRD_references))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Using a simple visualization, we get a sense of the regulatory complexity of the CSRD directive. Each "clique" (i.e. highly connected hub) represented here may be source of confusion or dispute for whoever does not have a legal background, possibly explaining why so many organizations may offer CSRD specific consultancy practices.
+# MAGIC Using a simple visualization, we get a sense of the complexity behind the CSRD directive. Each "clique" (i.e. highly connected hub) represented here may be source of confusion or dispute for whoever does not have a legal background, possibly explaining why so many organizations recently started to offer CSRD specific consultancy practices.

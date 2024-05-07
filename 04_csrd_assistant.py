@@ -1,7 +1,7 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC ## Compliance assistant
-# MAGIC In this section, we want to leverage our newly acquired knowledge of articles and referenced articles to further augment the accuracy and relevance of any Generative AI powered regulatory assistant. Being able to traverse a knowledge graph and navigating through legal references and definitions might present opportunities for many consultancy businesses to improve regulatory compliance and reduce operation expenses of their clients.
+# MAGIC In this section, we want to leverage our newly acquired knowledge of articles and referenced articles to further augment the accuracy and relevance of any Generative AI powered regulatory assistant, traversing our knowledge graph and navigating through legal references and definitions.
 
 # COMMAND ----------
 
@@ -10,22 +10,11 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We load our vector store built in our previous notebook. Once again, we cannot further state the importance of leveraging governed tables and vector store capabilities rather than in memory libraries like in this demo (note that `allow_dangerous_deserialization` used here). 
+# MAGIC We load our vector store and our graph object built in our previous notebooks. 
 
 # COMMAND ----------
 
-from langchain_community.embeddings import DatabricksEmbeddings
-embeddings = DatabricksEmbeddings(endpoint="databricks-bge-large-en")
-
-# COMMAND ----------
-
-from langchain.vectorstores import FAISS
-CSRD_search = FAISS.load_local(faiss_output_dir, embeddings=embeddings, allow_dangerous_deserialization=True)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Similarly, we load our graph object by first reading our delta tables of nodes and edges.
+CSRD_search = load_vector_store_as_retriever()
 
 # COMMAND ----------
 
@@ -39,12 +28,13 @@ CSRD_graph = nx.DiGraph()
 for i, n in nodes_df.iterrows():
   CSRD_graph.add_node(n['id'], label=n['label'], title=n['content'], group=n['group'])
 for i, e in edges_df.iterrows():
-  CSRD_graph.add_edge(e['src'], e['dst'], label=e['label'])
+  if e['src'] != e['dst']:
+    CSRD_graph.add_edge(e['src'], e['dst'])
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC In a previous section, we showed how langchain could help us "chain" our model with our vector store as part of a RAG strategy. In this section, we will extend the `BaseRetriever` class to further expand our search to relevant nodes and its referenced content (limiting our search to 1-hop in our graph)
+# MAGIC In a previous section, we showed how langchain could help us "chain" our model with our vector store as part of a RAG strategy. In this section, we will extend the `BaseRetriever` class to further expand our search to relevant nodes and their referenced content (limiting our search to 1-hop in our graph)
 
 # COMMAND ----------
 
@@ -134,7 +124,7 @@ prompt = PromptTemplate(template=TEMPLATE, input_variables=["context", "question
 chain_kg = RetrievalQA.from_chain_type(
     llm=chat_model,
     chain_type="stuff",
-    retriever=CustomRetriever(retriever=CSRD_search.as_retriever(), knowledge_graph=CSRD_graph),
+    retriever=CustomRetriever(retriever=CSRD_search, knowledge_graph=CSRD_graph),
     chain_type_kwargs={"prompt": prompt},
     return_source_documents = True
 )
@@ -142,7 +132,7 @@ chain_kg = RetrievalQA.from_chain_type(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC As reported below, a simple question has now triggered additional content search that could be used to return a more objective and accurate answer.
+# MAGIC As reported below, a simple question now triggers additional content search that can be used to formulate a more objective and accurate answer to a given question.
 
 # COMMAND ----------
 
@@ -155,18 +145,23 @@ displayHTML(rag_kg_html(question['query'], answer['result'], answer['source_docu
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Although we brought relevant content in order to formulate a more objective answer, too much content is being returned (even when limiting traversal to maximum 1 hop) because of the high number of connection in our knowledge graph. Though modern models can handle larger context window (32k tokens for DBRX), a model might not be able to equally exploit each information returned (model tend to ignore context not at the begining or end of the context window) and / or might simply fail because of context size. 
+# MAGIC Although we brought relevant content in order to formulate a more objective answer, too much content is being returned (even when limiting traversal to maximum 1 hop) because of the high degree of connections in our knowledge graph. Though modern models can handle larger context window (32k tokens for DBRX), a model might not be able to fully and equally exploit each information (information overflow) and / or might simply fail because of overloaded context size. 
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Multi stage reasoning
-# MAGIC An alternative scenario to the above would be to probe our vector store recursively, formulating an answer by ensuring full comprehension of each of the returned definitions, iteratively. This can be addressed through multi stage reasoning by defining multiple agents. At the time of this demo, OpenAI model my exhibit higher degree of reasoning than most open source models. For the purpose of that demo, we will leverage OpenAI API by loading our private key through databricks [secrets](https://docs.databricks.com/en/security/secrets/index.html).
+# MAGIC An alternative scenario to the above would be to probe our vector store recursively, formulating an answer by ensuring full comprehension of each of the returned definitions, iteratively. Although an active area for reasearch, this can be addressed through multi stage reasoning. At the time of this demo, OpenAI model exhibitw higher degree of reasoning than most open source models. For the purpose of that demo, we will leverage OpenAI API by loading our private key through databricks [secrets](https://docs.databricks.com/en/security/secrets/index.html).
 
 # COMMAND ----------
 
 from langchain_openai import ChatOpenAI
 import os
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Add your openAI api key in your secrets, hereby referenced as `industry-solutions.openai_key`
 
 # COMMAND ----------
 
@@ -188,7 +183,36 @@ from langchain.agents.agent import AgentExecutor
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We will define two agents. Whilst the former will be responsible from reading our vector store for relevant content, the latter might be called to fetch referenced article content, enriching prompt to let our model acquire all its necessary knowledge. At the time of this demo, agent modelling is still an active area of research and might be considered a black box with respect to calling individual tools / functions. We maximize the relevance of our tools by adding the right level of documentation.
+# MAGIC We will define two agents. The former will be responsible from reading our vector store for relevant content. The latter might be called to fetch referenced article content, enriching prompt to let our model acquire all its necessary knowledge. At the time of this demo, agent modelling is still an active area of research and might be considered a black box with respect to calling individual tools / functions. We maximize the relevance of our tools by adding the right level of documentation.
+
+# COMMAND ----------
+
+CSRD_search_vs = load_vector_store()
+
+# COMMAND ----------
+
+class FindArticleByQuerySimilarity(BaseModel):
+  query: str = Field(..., description="The question or query for which you need additional information.")
+
+@tool('search_content', args_schema=FindArticleByQuerySimilarity)
+def search_content(query: str) -> str:
+  """Use this tool to search for content that is relevant to a given question."""
+
+  hits = CSRD_search_vs.similarity_search_with_relevance_scores(query)
+  response = []
+  for doc, score in hits:
+    doc_id = doc.metadata['id']
+    doc_label = doc.metadata['label']
+    doc_content = doc.page_content
+    doc_references = ','.join(list(CSRD_graph.neighbors(doc_id)))
+    response.append(f'''###
+[article_id]: {doc_id}
+[article_name]: {doc_label}
+[article_references]: {doc_references}
+[article_content]: {doc_content}''')
+    
+  response = "\n\n".join(response)
+  return response
 
 # COMMAND ----------
 
@@ -200,7 +224,7 @@ def search_reference(article_reference: str) -> str:
   """Use this tool when you need to search for additional articles referenced in the article content."""
 
   hit = CSRD_graph.nodes[article_reference]
-  doc_references = ','.join([d for d in list(CSRD_graph.neighbors(article_reference)) if d != article_reference])
+  doc_references = ','.join(list(CSRD_graph.neighbors(article_reference)))
   doc_content = hit['title']
   doc_label = hit['label']
   response = f'''###
@@ -208,31 +232,6 @@ def search_reference(article_reference: str) -> str:
 [article_name]: {doc_label}
 [article_references]: {doc_references}
 [article_content]: {doc_content}'''
-  return response
-
-# COMMAND ----------
-
-class FindArticleByQuerySimilarity(BaseModel):
-  query: str = Field(..., description="The question or query for which you need additional information.")
-
-@tool('search_content', args_schema=FindArticleByQuerySimilarity)
-def search_content(query: str) -> str:
-  """Use this tool to search for content that is relevant to a given question."""
-
-  hits = CSRD_search.similarity_search_with_relevance_scores(query)
-  response = []
-  for doc, score in hits:
-    doc_id = doc.metadata['id']
-    doc_label = doc.metadata['label']
-    doc_content = doc.page_content
-    doc_references = ','.join([d for d in list(CSRD_graph.neighbors(doc_id)) if d != doc_id])
-    response.append(f'''###
-[article_id]: {doc_id}
-[article_name]: {doc_label}
-[article_references]: {doc_references}
-[article_content]: {doc_content}''')
-    
-  response = "\n\n".join(response)
   return response
 
 # COMMAND ----------
@@ -264,7 +263,7 @@ scratch_pad = RunnablePassthrough.assign(scratchpad = lambda x: format_to_openai
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Finally, we can chain our model that we bind with our couple of functions and a prompt that we designed for that specific scenario.
+# MAGIC Finally, we chain our model that we bind with our functions and a new prompt designed for that specific scenario.
 
 # COMMAND ----------
 
@@ -293,7 +292,12 @@ displayHTML(llm_html(query, answer['output']))
 
 # MAGIC %md
 # MAGIC ## Closing thoughts
-# MAGIC We appreciate we barely scratched the surface of multi stage reasoning. We invite users to go through further documentation such as the excellent [knowledge graphs rag short course](https://www.deeplearning.ai/short-courses/knowledge-graphs-rag/) on deeplearning.ai. However, through this solution, we proved the strategic relevance of generative AI capabilities and the importance of bringing RAG applications to the complex field of regulatory compliance. By expanding the scope beyond CSRD, to multiple regulatory documents, one may consider fine tuning a model and better understand regulatory structures across multiple markets / segments / industries.
+# MAGIC We appreciate we barely scratched the surface of multi stage reasoning. We invite users to go through courses and documentation such as the excellent [knowledge graphs rag short course](https://www.deeplearning.ai/short-courses/knowledge-graphs-rag/) on deeplearning.ai. However, through this solution, we hope we were able to demonstrate the strategic relevance of generative AI capabilities and the importance of bringing RAG applications to the field of regulatory compliance. By expanding the scope beyond CSRD, to multiple regulatory documents, one may even consider fine tuning a model and better understand the different regulatory structures across markets / segments / industries.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC As a final thought, we may wonder how the same applies to different languages than english. Running the same in French should hopefully give compliance officer further confidence in the ability for generative AI applications to drive better transparency and accountability in the area of regulatory compliance.
 
 # COMMAND ----------
 
@@ -301,8 +305,3 @@ query = 'Quelles sont les conditions pur que mon entreprise soit sujette au stat
 
 answer = agent.invoke({"input": query})
 displayHTML(llm_html(query, answer['output']))
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC As a final thought, one may wonder how the same applies to different languages than english. Running the same in French should hopefully give compliance officer a better idea of the opportunities generative AI capabilities can bring to the future of risk and compliance.
