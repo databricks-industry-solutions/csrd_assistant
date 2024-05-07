@@ -151,7 +151,7 @@ displayHTML(rag_kg_html(question['query'], answer['result'], answer['source_docu
 
 # MAGIC %md
 # MAGIC ## Multi stage reasoning
-# MAGIC An alternative scenario to the above would be to probe our vector store recursively, formulating an answer by ensuring full comprehension of each of the returned definitions, iteratively. Although an active area for reasearch, this can be addressed through multi stage reasoning. At the time of this demo, OpenAI model exhibitw higher degree of reasoning than most open source models. For the purpose of that demo, we will leverage OpenAI API by loading our private key through databricks [secrets](https://docs.databricks.com/en/security/secrets/index.html).
+# MAGIC An alternative scenario to the above would be to probe our vector store recursively, formulating an answer by ensuring full comprehension of each of the returned definitions, iteratively. Although an active area for reasearch, this can be addressed through multi stage reasoning. At the time of this demo, OpenAI model exhibits higher degree of reasoning than most open source models. For the purpose of that demo, we will leverage OpenAI API by loading our private key through databricks [secrets](https://docs.databricks.com/en/security/secrets/index.html).
 
 # COMMAND ----------
 
