@@ -28,7 +28,7 @@ Any issues discovered through the use of this project should be filed as GitHub 
 |beautifulsoup4|Parsing HTML|MIT|https://pypi.org/project/beautifulsoup4/|
 |networkx|Graph library|BSD|https://pypi.org/project/networkx/|
 |pyvis|Graph visualization|BSD|https://pypi.org/project/pyvis/|
-|faiss-cpu|In memory vector store|MIT|https://pypi.org/project/faiss-cpu/|
 |langchain|LLM framework|MIT|https://pypi.org/project/langchain/|
 |langchain-openai|LLM framework for openAI|MIT|https://pypi.org/project/langchain-openai/|
+|pydantic|Python hints|MIT|https://pypi.org/project/pydantic/|
 |SQLAlchemy|Database abstraction|MIT|https://pypi.org/project/SQLAlchemy/|
