@@ -26,8 +26,8 @@ def load_model(endpoint, index):
     Answer compliance issue related to the CSRD directive only.
     If the question is not related to regulatory compliance, kindly decline to answer. 
     If you don't know the answer, just say that you don't know, don't try to make up an answer. 
-    Keep the answer as concise as possible, always citing articles and chapters whenever applicable.
-    Please do not repeat the answer and do not add any additional information. 
+    Keep the answer as concise as possible and always reference articles and chapters used to formulate your response.
+    Do not repeat the answer and do not add any additional information. 
     Context: {context}
 
     Chat History: {chat_history}

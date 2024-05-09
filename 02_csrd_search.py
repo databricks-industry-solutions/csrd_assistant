@@ -138,4 +138,9 @@ displayHTML(rag_html(question['query'], answer['result'], answer['source_documen
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Through this simple example, we have guided our model to formulate a point of view solely based on facts we provided upfront (through our vector store), facts that we know we can trust. For the purpose of that demo, we represented output as a form of an HTML notebook. In real life scenario, one should offer that capability as a chat interface outside of a notebook based environment.
+# MAGIC Through this simple example, we have guided our model to formulate a point of view solely based on facts we provided upfront (through our vector store), facts that we know we can trust. For the purpose of that demo, we represented output as a form of an HTML notebook. In real life scenario, one should offer that capability as a chat interface outside of a notebook based environment. Here is a simple example done using the [Streamlit](https://streamlit.io/) framework.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ![demo_chatbot](https://raw.githubusercontent.com/databricks-industry-solutions/csrd_assistant/main/images/demo_chatbot.gif)
