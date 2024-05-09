@@ -1,9 +1,9 @@
 beautifulsoup4==4.12.3
 networkx==3.3
 pyvis==0.3.2
-mlflow==2.10.1
 SQLAlchemy==2.0.29
 langchain==0.1.17
 langchain-openai==0.1.6
 databricks-vectorsearch==0.23
 pydantic==1.10.10
+dbtunnel[asgiproxy,streamlit]==0.14.6

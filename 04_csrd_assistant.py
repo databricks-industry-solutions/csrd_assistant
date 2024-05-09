@@ -301,7 +301,7 @@ displayHTML(llm_html(query, answer['output']))
 
 # COMMAND ----------
 
-query = 'Quelles sont les conditions pur que mon entreprise soit sujette au statut de micro entreprise? Dans le case de micro enterprise, quelles sont les dispositions particulieres en termes de normes de reporting?'
+query = 'Quelles sont les conditions pour que mon entreprise soit sujette au statut de micro entreprise? Dans le case de micro enterprise, quelles sont les dispositions particulieres en termes de normes de reporting?'
 
 answer = agent.invoke({"input": query})
 displayHTML(llm_html(query, answer['output']))
