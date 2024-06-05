@@ -103,11 +103,13 @@ def parse_history(messages):
 # CORE STREAMLIT APP
 # ------------------
 
-st.image('european_commision.svg', width=300)
+st.image('csrd.png')
+st.markdown('___')
 st.caption('''The Corporate Sustainability Reporting Directive (CSRD) is a European Union initiative 
 aimed at enhancing corporate accountability regarding sustainability matters. It mandates certain companies to 
 disclose non-financial information (such as environmental, social, and governance factors) in their annual reports 
 and other public disclosures. This assistant provides users with the ability to navigate the complexity of the CSRD directive, its numerous chapters, articles and paragraphs.''')
+st.markdown('___')
 
 # Initialize chat history and load model if necessary
 if "messages" not in st.session_state:

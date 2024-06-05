@@ -4,7 +4,16 @@
 [![CLOUD](https://img.shields.io/badge/CLOUD-ALL-blue?style=for-the-badge)](https://databricks.com/try-databricks)
 [![POC](https://img.shields.io/badge/POC-3_days-green?style=for-the-badge)](https://databricks.com/try-databricks)
 
-*The CSRD (Corporate Sustainability Reporting Directive) is a European Union initiative aimed at enhancing corporate accountability regarding sustainability matters. It mandates certain companies to disclose non-financial information (such as environmental, social, and governance factors) in their annual reports and other public disclosures. Although this initiative may pose a data quality challenge to many firms collecting (and reporting on) this information for the first time, the [directive](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02013L0034-20240109&qid=1712714544806) itself (as per many regulatory documents) may be source of confusion / concerns and subject to various interpretation and therefore a perfect playground for generative AI application. In this solution accelerator co-developped with Deloitte France, we demonstrate how generative AI, retrieval augmented generation (RAG) and multi stage reasoning can be used to better navigate through the complexities of regulatory filings, bringing more transparency for companies to disclose their societal and environmental impacts.*
+*Organizations are rushing to comply with new CSRD (Corporate Sustainability Reporting Directive) regulations before the January 1st, 2025 deadline. The extensive 200+ page legal document outlining the CSRD regulation and ESRS reporting standards has been revised multiple times over the past decade and now applies to a broader range of organizations. Deloitte and Databricks have joined forces to design and build an accelerator that combines the best of both worlds: the expertise of a leading professional services consulting firm with the cutting-edge technology of a top data vendor. This collaboration provides a comprehensive solution integrating the latest Data + AI technologies, including GenAI, LLM, prompt engineering, vector search, Langchain, and more. These tools are designed to be easily understood and utilized by business professionals using natural language.*
+
+Our vision is to empower organizations by provisioning 2 key capabilities:
+Ensure that individuals working on sustainability reports are thoroughly familiar with the CSRD rules, enabling them to perform their duties without risk of infringement. This complementary tool will seamlessly integrate with the ESRS reporting standards and workflows that organizations must establish to meet CSRD reporting requirements.
+Serve as a catalyst for aligning with upcoming industry-specific variations of the ESRS reporting standards, such as those for Oil and Gas, Motor Vehicles, and Energy production utilities. This will facilitate a quicker and more thorough understanding of the different reporting requirements and associated indicators.
+ 
+Until the sectorial ESRS reporting standard are issued, the solution could also integrate directives issued by sector specific regulators (e.g. ACPR for financial services in France) related to sustainability reporting and help organizations adapt their CSRD reporting to their sectors.
+ 
+Broadly speaking, the accelerator could also be applied to other regulatory texts that require specific reporting, such as the AI Act. This ensures that when new regulations are enacted, organizations will have reliable methodology to address complex regulatory requirements swiftly and efficiently.
+
 
 ## Reference Architecture
 ![reference_architecture.png](https://raw.githubusercontent.com/databricks-industry-solutions/csrd_assistant/main/images/reference_architecture.png)
@@ -12,6 +21,7 @@
 ## Authors
 <antoine.amend@databricks.com><br>
 <corey.abshire@databricks.com>
+
 
 ## Project support 
 
