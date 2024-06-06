@@ -4,11 +4,6 @@
 [![CLOUD](https://img.shields.io/badge/CLOUD-ALL-blue?style=for-the-badge)](https://databricks.com/try-databricks)
 [![POC](https://img.shields.io/badge/POC-3_days-green?style=for-the-badge)](https://databricks.com/try-databricks)
 
-
-Solution was co-developped with
-
-<img src='https://raw.githubusercontent.com/databricks-industry-solutions/csrd_assistant/main/images/deloitte_logo.png' width=100>
-
 *Organizations are rushing to comply with new CSRD (Corporate Sustainability Reporting Directive) regulations before the January 1st, 2025 deadline. The extensive 200+ page legal document outlining the CSRD regulation and ESRS reporting standards has been revised multiple times over the past decade and now applies to a broader range of organizations. Deloitte and Databricks have joined forces to design and build an accelerator that combines the best of both worlds: the expertise of a leading professional services consulting firm with the cutting-edge technology of a top data vendor. This collaboration provides a comprehensive solution integrating the latest Data + AI technologies, including GenAI, LLM, prompt engineering, vector search, Langchain, and more. These tools are designed to be easily understood and utilized by business professionals using natural language.*
 
 ## Scope
