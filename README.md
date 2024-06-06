@@ -22,7 +22,6 @@ Broadly speaking, the accelerator could also be applied to other regulatory text
 ## Authors
 <antoine.amend@databricks.com><br>
 <corey.abshire@databricks.com><br>
-<elarroze@deloitte.fr>
 
 
 ## Project support 
