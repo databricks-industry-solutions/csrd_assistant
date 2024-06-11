@@ -5,5 +5,5 @@ SQLAlchemy==2.0.29
 langchain==0.1.17
 langchain-openai==0.1.6
 databricks-vectorsearch==0.23
-pydantic==1.10.10
+pydantic==1.10.13
 dbtunnel[asgiproxy,streamlit]==0.14.6
